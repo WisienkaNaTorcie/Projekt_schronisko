@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 
 users: list = []
 place: list = []
+clients: list = []
 
 class User:
     def __init__(self, name, surname, location, staz):
@@ -36,6 +37,24 @@ class Place:
 
     def get_coordinates(self) -> list:
         adres_url: str = f'https://pl.wikipedia.org/wiki/{self.lokalizacja}'
+        response_html = BeautifulSoup(requests.get(adres_url).text, 'html.parser')
+        return [
+            float(response_html.select('.latitude')[1].text.replace(',', '.')),
+            float(response_html.select('.longitude')[1].text.replace(',', '.')),
+        ]
+
+class Client:
+    def __init__(self, name, surname, location, contact_number):
+        self.name = name
+        self.surname = surname
+        self.location = location
+        self.contact_number = contact_number
+        self.coordinates = self.get_coordinates()
+        self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1],
+                                            text=f'{self.name} {self.surname}')
+
+    def get_coordinates(self) -> list:
+        adres_url: str = f'https://pl.wikipedia.org/wiki/{self.location}'
         response_html = BeautifulSoup(requests.get(adres_url).text, 'html.parser')
         return [
             float(response_html.select('.latitude')[1].text.replace(',', '.')),
@@ -210,8 +229,92 @@ def show_placowka_details():
     map_widget.set_zoom(15)
     map_widget.set_position(place[i].coordinates[0], place[i].coordinates[1])
 
+def add_client() -> None:
+    name = entry_client_name.get()
+    surname = entry_client_surname.get()
+    location = entry_client_location.get()
+    contact_number = entry_client_contact.get()
+
+    client = Client(name=name, surname=surname, location=location, contact_number=contact_number)
+    clients.append(client)
+    print(clients)
+
+    entry_client_name.delete(0, END)
+    entry_client_surname.delete(0, END)
+    entry_client_location.delete(0, END)
+    entry_client_contact.delete(0, END)
+
+    entry_client_name.focus()
+    show_clients()
+
+def show_clients():
+    listbox_lista_klientow.delete(0, END)
+    for idx, client in enumerate(clients):
+        listbox_lista_klientow.insert(idx, f'{idx + 1}. {client.name} {client.surname}')
+
+def remove_client():
+    i = listbox_lista_klientow.index(ACTIVE)
+    clients[i].marker.delete()
+    clients.pop(i)
+    show_clients()
+
+def edit_client():
+    i = listbox_lista_klientow.index(ACTIVE)
+    name = clients[i].name
+    surname = clients[i].surname
+    location = clients[i].location
+    contact_number = clients[i].contact_number
+
+    entry_client_name.delete(0, END)
+    entry_client_surname.delete(0, END)
+    entry_client_location.delete(0, END)
+    entry_client_contact.delete(0, END)
+
+    entry_client_name.insert(0, name)
+    entry_client_surname.insert(0, surname)
+    entry_client_location.insert(0, location)
+    entry_client_contact.insert(0, contact_number)
+
+    button_dodaj_klienta.config(text='Zapisz', command=lambda: update_client(i))
+
+def update_client(i):
+    name = entry_client_name.get()
+    surname = entry_client_surname.get()
+    location = entry_client_location.get()
+    contact_number = entry_client_contact.get()
+
+    clients[i].name = name
+    clients[i].surname = surname
+    clients[i].location = location
+    clients[i].contact_number = contact_number
+
+    clients[i].coordinates = clients[i].get_coordinates()
+    clients[i].marker.delete()
+    clients[i].marker = map_widget.set_marker(clients[i].coordinates[0], clients[i].coordinates[1],
+                                              text=f'{clients[i].name} {clients[i].surname}')
+
+    show_clients()
+    button_dodaj_klienta.config(text='Dodaj', command=add_client)
+
+    entry_client_name.delete(0, END)
+    entry_client_surname.delete(0, END)
+    entry_client_location.delete(0, END)
+    entry_client_contact.delete(0, END)
+
+    entry_client_name.focus()
+
+def show_client_details():
+    i = listbox_lista_klientow.index(ACTIVE)
+    label_szczegoly_klienta_name_wartosc.config(text=clients[i].name)
+    label_szczegoly_klienta_surname_wartosc.config(text=clients[i].surname)
+    label_szczegoly_klienta_location_wartosc.config(text=clients[i].location)
+    label_szczegoly_klienta_contact_wartosc.config(text=clients[i].contact_number)
+
+    map_widget.set_zoom(15)
+    map_widget.set_position(clients[i].coordinates[0], clients[i].coordinates[1])
+
 root = Tk()
-root.geometry("1400x1000")
+root.geometry("1500x1000")
 root.title('Projekt-baza schroniska')
 
 # Frames for Users
@@ -223,16 +326,25 @@ ramka_mapa = Frame(root)
 ramka_lista_obiektow.grid(row=0, column=0, sticky="nsew")
 ramka_formularz.grid(row=0, column=1, sticky="nsew")
 ramka_szczegoly_obiektow.grid(row=1, column=0, columnspan=2, sticky="nsew")
-ramka_mapa.grid(row=4, column=0, columnspan=2, sticky="nsew")  # Moved to row 4
+ramka_mapa.grid(row=2, column=10, columnspan=3, sticky="nsew")
+
+# Frames for Clients
+ramka_lista_klientow = Frame(root)
+ramka_formularz_klientow = Frame(root)
+ramka_szczegoly_klientow = Frame(root)
+
+ramka_lista_klientow.grid(row=2, column=0, sticky="nsew")
+ramka_formularz_klientow.grid(row=2, column=1, sticky="nsew")
+ramka_szczegoly_klientow.grid(row=3, column=0, columnspan=2, sticky="nsew")
 
 # Frames for Places
 ramka_lista_placowek = Frame(root)
 ramka_formularz_placowek = Frame(root)
 ramka_szczegoly_placowek = Frame(root)
 
-ramka_lista_placowek.grid(row=2, column=0, sticky="nsew")  # Moved to row 2
-ramka_formularz_placowek.grid(row=2, column=1, sticky="nsew")  # Moved to row 2
-ramka_szczegoly_placowek.grid(row=3, column=0, columnspan=2, sticky="nsew")  # Moved to row 3
+ramka_lista_placowek.grid(row=4, column=0, sticky="nsew")
+ramka_formularz_placowek.grid(row=4, column=1, sticky="nsew")
+ramka_szczegoly_placowek.grid(row=5, column=0, columnspan=2, sticky="nsew")
 
 # ramka_lista_obiektow (Users)
 label_lista_obiektow = Label(ramka_lista_obiektow, text='Lista użytkowników:')
@@ -254,13 +366,10 @@ label_formularz.grid(row=0, column=0)
 
 label_imie = Label(ramka_formularz, text='Imię:')
 label_imie.grid(row=1, column=0, sticky=W)
-
 label_nazwisko = Label(ramka_formularz, text='Nazwisko:')
 label_nazwisko.grid(row=2, column=0, sticky=W)
-
 label_miejscowosc = Label(ramka_formularz, text='Miejscowość:')
 label_miejscowosc.grid(row=3, column=0, sticky=W)
-
 label_staz = Label(ramka_formularz, text='Staż w schronisku:')
 label_staz.grid(row=4, column=0, sticky=W)
 
@@ -299,6 +408,69 @@ label_szczegoly_obiektu_staz = Label(ramka_szczegoly_obiektow, text='Długość 
 label_szczegoly_obiektu_staz.grid(row=1, column=6)
 label_szczegoly_obiektu_staz_wartosc = Label(ramka_szczegoly_obiektow, text='....')
 label_szczegoly_obiektu_staz_wartosc.grid(row=1, column=7)
+
+# ramka_lista_klientow (Clients)
+label_lista_klientow = Label(ramka_lista_klientow, text='Lista klientów:')
+label_lista_klientow.grid(row=0, column=0)
+
+listbox_lista_klientow = Listbox(ramka_lista_klientow, width=50, height=10)
+listbox_lista_klientow.grid(row=1, column=0, columnspan=3)
+
+button_pokaz_szczegoly_klienta = Button(ramka_lista_klientow, text='Pokaż szczegóły', command=show_client_details)
+button_pokaz_szczegoly_klienta.grid(row=2, column=0)
+button_usun_klienta = Button(ramka_lista_klientow, text='Usuń', command=remove_client)
+button_usun_klienta.grid(row=2, column=1)
+button_edytuj_klienta = Button(ramka_lista_klientow, text='Edytuj', command=edit_client)
+button_edytuj_klienta.grid(row=2, column=2)
+
+# ramka_formularz_klientow (Clients)
+label_formularz_klientow = Label(ramka_formularz_klientow, text='Formularz klientów:')
+label_formularz_klientow.grid(row=0, column=0)
+
+label_client_name = Label(ramka_formularz_klientow, text='Imię:')
+label_client_name.grid(row=1, column=0, sticky=W)
+label_client_surname = Label(ramka_formularz_klientow, text='Nazwisko:')
+label_client_surname.grid(row=2, column=0, sticky=W)
+label_client_location = Label(ramka_formularz_klientow, text='Miejscowość:')
+label_client_location.grid(row=3, column=0, sticky=W)
+label_client_contact = Label(ramka_formularz_klientow, text='Numer kontaktowy:')
+label_client_contact.grid(row=4, column=0, sticky=W)
+
+entry_client_name = Entry(ramka_formularz_klientow)
+entry_client_name.grid(row=1, column=1)
+entry_client_surname = Entry(ramka_formularz_klientow)
+entry_client_surname.grid(row=2, column=1)
+entry_client_location = Entry(ramka_formularz_klientow)
+entry_client_location.grid(row=3, column=1)
+entry_client_contact = Entry(ramka_formularz_klientow)
+entry_client_contact.grid(row=4, column=1)
+
+button_dodaj_klienta = Button(ramka_formularz_klientow, text='Dodaj', command=add_client)
+button_dodaj_klienta.grid(row=5, column=0, columnspan=2)
+
+# ramka_szczegoly_klientow (Clients)
+label_pokaz_szczegoly_klientow = Label(ramka_szczegoly_klientow, text='Szczegóły klienta:')
+label_pokaz_szczegoly_klientow.grid(row=0, column=0)
+
+label_szczegoly_klienta_name = Label(ramka_szczegoly_klientow, text='Imię: ')
+label_szczegoly_klienta_name.grid(row=1, column=0)
+label_szczegoly_klienta_name_wartosc = Label(ramka_szczegoly_klientow, text='....')
+label_szczegoly_klienta_name_wartosc.grid(row=1, column=1)
+
+label_szczegoly_klienta_surname = Label(ramka_szczegoly_klientow, text='Nazwisko: ')
+label_szczegoly_klienta_surname.grid(row=1, column=2)
+label_szczegoly_klienta_surname_wartosc = Label(ramka_szczegoly_klientow, text='....')
+label_szczegoly_klienta_surname_wartosc.grid(row=1, column=3)
+
+label_szczegoly_klienta_location = Label(ramka_szczegoly_klientow, text='Miejscowość: ')
+label_szczegoly_klienta_location.grid(row=1, column=4)
+label_szczegoly_klienta_location_wartosc = Label(ramka_szczegoly_klientow, text='....')
+label_szczegoly_klienta_location_wartosc.grid(row=1, column=5)
+
+label_szczegoly_klienta_contact = Label(ramka_szczegoly_klientow, text='Numer kontaktowy: ')
+label_szczegoly_klienta_contact.grid(row=1, column=6)
+label_szczegoly_klienta_contact_wartosc = Label(ramka_szczegoly_klientow, text='....')
+label_szczegoly_klienta_contact_wartosc.grid(row=1, column=7)
 
 # ramka_lista_placowek (Places)
 label_lista_placowek = Label(ramka_lista_placowek, text='Lista placówek:')
@@ -363,9 +535,9 @@ label_szczegoly_obiektu_godzinyotwarcia.grid(row=1, column=6)
 label_szczegoly_obiektu_godzinyotwarcia_wartosc = Label(ramka_szczegoly_placowek, text='....')
 label_szczegoly_obiektu_godzinyotwarcia_wartosc.grid(row=1, column=7)
 
-# ramka_mapa (Shared Map for Users and Places)
-map_widget = tkintermapview.TkinterMapView(ramka_mapa, width=1200, height=400, corner_radius=0)
-map_widget.grid(row=0, column=0, columnspan=2)
+# ramka_mapa (Shared Map for Users, Clients, and Places)
+map_widget = tkintermapview.TkinterMapView(ramka_mapa, width=500, height=400, corner_radius=0)
+map_widget.grid(row=12, column=12, columnspan=2)
 map_widget.set_position(52.23, 21.00)
 map_widget.set_zoom(6)
 
