@@ -539,6 +539,6 @@ label_szczegoly_obiektu_godzinyotwarcia_wartosc.grid(row=1, column=7)
 map_widget = tkintermapview.TkinterMapView(ramka_mapa, width=500, height=400, corner_radius=0)
 map_widget.grid(row=12, column=12, columnspan=2)
 map_widget.set_position(52.23, 21.00)
-map_widget.set_zoom(6)
+map_widget.set_zoom(5)
 
 root.mainloop()
