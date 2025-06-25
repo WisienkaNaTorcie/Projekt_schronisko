@@ -457,7 +457,6 @@ def generate_map_all_shelters():
             text=f"{plac.placowka}"
         )
 
-
 def generate_map_all_employees():
     map_widget.delete_all_marker()
     map_widget.set_zoom(5)
