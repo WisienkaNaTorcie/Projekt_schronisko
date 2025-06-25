@@ -788,4 +788,5 @@ map_widget.set_zoom(5)
 # Initialize dropdowns
 update_place_dropdowns()
 
+
 root.mainloop()
